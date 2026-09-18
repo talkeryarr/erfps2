@@ -6,10 +6,12 @@ use crate::program::Program;
 
 mod jp;
 mod ww;
+mod ww271;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum ERGameVersion {
     Ww270,
+    Ww271,
     Jp2701,
 }
 
@@ -19,6 +21,7 @@ impl GameVersion for ERGameVersion {
     fn from_lang_version(lang_id: u16, version: &str) -> Option<Self> {
         match (lang_id, version) {
             (LANG_ID_EN, "2.7.0.0") => Some(Self::Ww270),
+            (LANG_ID_EN, "2.7.1.0") => Some(Self::Ww271),
             (LANG_ID_JP, "2.7.0.1") => Some(Self::Jp2701),
             _ => None,
         }
@@ -27,13 +30,14 @@ impl GameVersion for ERGameVersion {
 
 #[derive(Clone, Copy, Debug)]
 pub struct Rva {
-    ww: u32,
+    ww270: u32,
+    ww271: u32,
     jp: u32,
 }
 
 impl Rva {
-    const fn new(ww: u32, jp: u32) -> Self {
-        Self { ww, jp }
+    const fn new(ww270: u32, ww271: u32, jp: u32) -> Self {
+        Self { ww270, ww271, jp }
     }
 }
 
@@ -44,11 +48,12 @@ impl Deref for Rva {
         static GAME_VERSION: LazyLock<ERGameVersion> = LazyLock::new(|| {
             let program = Program::current();
             ERGameVersion::detect(&program.into())
-                .expect("this game version is not supported; expected ELDEN RING 1.17.0")
+                .expect("this game version is not supported; expected ELDEN RING 1.17.0 or 1.17.1")
         });
 
         match *GAME_VERSION {
-            ERGameVersion::Ww270 => &self.ww,
+            ERGameVersion::Ww270 => &self.ww270,
+            ERGameVersion::Ww271 => &self.ww271,
             ERGameVersion::Jp2701 => &self.jp,
         }
     }
@@ -56,7 +61,7 @@ impl Deref for Rva {
 
 macro_rules! rva {
     ($($i:ident),*$(,)*) => {
-        $(pub const $i: Rva = Rva::new(ww::$i, jp::$i);)*
+        $(pub const $i: Rva = Rva::new(ww::$i, ww271::$i, jp::$i);)*
     };
 }
 
